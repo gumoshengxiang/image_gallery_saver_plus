@@ -73,6 +73,7 @@ class ImageGallerySaverPlusPlugin : FlutterPlugin, MethodCallHandler {
         var fileName = name ?: System.currentTimeMillis().toString()
         val mimeType = getMIMEType(extension)
         val isVideo = mimeType?.startsWith("video") == true
+        val photoPath = Environment.DIRECTORY_DCIM + "/Camera"
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // >= android 10
@@ -86,7 +87,8 @@ class ImageGallerySaverPlusPlugin : FlutterPlugin, MethodCallHandler {
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH, when {
                         isVideo -> Environment.DIRECTORY_MOVIES
-                        else -> Environment.DIRECTORY_PICTURES
+                        // else -> Environment.DIRECTORY_PICTURES
+                        else -> photoPath
                     }
                 )
                 if (!TextUtils.isEmpty(mimeType)) {
