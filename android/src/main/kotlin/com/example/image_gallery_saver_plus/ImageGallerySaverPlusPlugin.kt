@@ -86,7 +86,7 @@ class ImageGallerySaverPlusPlugin : FlutterPlugin, MethodCallHandler {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH, when {
-                        isVideo -> Environment.DIRECTORY_MOVIES
+//                        isVideo -> Environment.DIRECTORY_MOVIES
                         // else -> Environment.DIRECTORY_PICTURES
                         else -> photoPath
                     }
