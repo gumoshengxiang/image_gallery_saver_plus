@@ -29,7 +29,10 @@ public class ImageGallerySaverPlusPlugin: NSObject, FlutterPlugin {
               let path = arguments["file"] as? String,
               let _ = arguments["name"],
               let isReturnFilePath = arguments["isReturnPathOfIOS"] as? Bool else { return }
-        if (isImageFile(filename: path)) {
+        
+        if (isGifFile(filename: path)) {
+            saveGIFToAlbum(fileUrl: URL.init(fileURLWithPath: path), isReturnImagePath: isReturnFilePath)
+        } else if (isImageFile(filename: path)) {
             saveImageAtFileUrl(path, isReturnImagePath: isReturnFilePath)
         } else {
             if (UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(path)) {
@@ -146,6 +149,50 @@ public class ImageGallerySaverPlusPlugin: NSObject, FlutterPlugin {
         })
     }
     
+    // ⚠️ GIF 专用保存方法
+    func saveGIFToAlbum(fileUrl: URL, isReturnImagePath: Bool) {
+        var imageIds: [String] = []
+        
+        PHPhotoLibrary.shared().performChanges({
+            // ⚠️ 关键：使用 PHAssetCreationRequest + addResource 保持原始数据
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.shouldMoveFile = false
+            
+            // 使用 PHAssetResourceTypePhoto 保存原始 GIF 数据
+            request.addResource(with: .photo, fileURL: fileUrl, options: options)
+            
+            if let imageId = request.placeholderForCreatedAsset?.localIdentifier {
+                imageIds.append(imageId)
+            }
+        }, completionHandler: { [unowned self] (success, error) in
+            DispatchQueue.main.async {
+                if success && imageIds.count > 0 {
+                    if isReturnImagePath {
+                        let assetResult = PHAsset.fetchAssets(withLocalIdentifiers: imageIds, options: nil)
+                        if assetResult.count > 0 {
+                            let imageAsset = assetResult[0]
+                            let options = PHContentEditingInputRequestOptions()
+                            options.canHandleAdjustmentData = { _ in true }
+                            imageAsset.requestContentEditingInput(with: options) { [unowned self] (contentEditingInput, info) in
+                                if let urlStr = contentEditingInput?.fullSizeImageURL?.absoluteString {
+                                    self.saveResult(isSuccess: true, filePath: urlStr)
+                                } else {
+                                    self.saveResult(isSuccess: true, filePath: nil)
+                                }
+                            }
+                        }
+                    } else {
+                        self.saveResult(isSuccess: true, filePath: nil)
+                    }
+                } else {
+                    print("GIF save error: \(error?.localizedDescription ?? "unknown")")
+                    self.saveResult(isSuccess: false, error: self.errorMessage)
+                }
+            }
+        })
+    }
+    
     /// finish saving，if has error，parameters error will not nill
     @objc func didFinishSavingImage(image: UIImage, error: NSError?, contextInfo: UnsafeMutableRawPointer?) {
         saveResult(isSuccess: error == nil, error: error?.description)
@@ -170,10 +217,15 @@ public class ImageGallerySaverPlusPlugin: NSObject, FlutterPlugin {
             || filename.hasSuffix(".JPEG")
             || filename.hasSuffix(".JPG")
             || filename.hasSuffix(".PNG")
-            || filename.hasSuffix(".gif")
-            || filename.hasSuffix(".GIF")
+//            || filename.hasSuffix(".gif")
+//            || filename.hasSuffix(".GIF")
             || filename.hasSuffix(".heic")
             || filename.hasSuffix(".HEIC")
+    }
+    
+    func isGifFile(filename: String) -> Bool {
+        return filename.hasSuffix(".gif")
+            || filename.hasSuffix(".GIF")
     }
 }
 
